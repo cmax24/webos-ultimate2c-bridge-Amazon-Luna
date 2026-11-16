@@ -2,11 +2,11 @@
 
 Makes the **8BitDo Ultimate 2C** work over its **2.4 GHz USB receiver** on a rooted LG webOS TV.
 
-Tested on an LG 55UR7500PSC, webOS 10.3.2, firmware 33.31.75, kernel 5.4.268, rooted with the Homebrew Channel. Status: working. D-pad navigation on the Home screen confirmed over the 2.4 GHz receiver. Moonlight and sleep/wake behaviour not yet checked.
+Tested on an LG 55UR7500PSC, webOS 10.3.2, firmware 33.31.75, kernel 5.4.268, rooted with the Homebrew Channel. Status: working. D-pad navigation on the Home screen confirmed over the 2.4 GHz receiver.
 
 ## The problem
 
-The receiver enumerates as `2dc8:310a` with an XInput interface (class `ff/5d/01`). The TV's built-in `xpad` driver binds to it, but the receiver **never sends input reports until the host sends the Xbox 360 "set LED" packet** (`01 03 02`) on its interrupt OUT endpoint. `xpad` only sends that packet through its LED class support, and LG's kernel is built without `CONFIG_JOYSTICK_XPAD_LEDS`, so the controller stays silent forever. Bluetooth works because it goes through a different path (LG's `lginput2`).
+The receiver enumerates as `2dc8:310a` with an XInput interface (class `ff/5d/01`). The TV's built-in `xpad` driver binds to it, but the receiver **never sends input reports until the host sends the Xbox 360 set-LED packet** on its interrupt OUT endpoint.
 
 The TV side is fine: synthetic D-pad events written into the xpad node move the Home screen focus, and LG's input library (`libim.so`) accepts any node whose key bitmap includes `BTN_GAMEPAD`.
 
@@ -27,7 +27,7 @@ Observed on the receiver's XInput interface:
 2. Creates a uinput pad named "Generic X-Box pad" (bus USB, `2dc8:310a`) with the same buttons, axes and ranges `xpad` would create.
 3. Detaches `xpad` from interface 0 via usbfs, claims it, sends the XInput capability requests and the LED packet.
 4. Parses the XInput reports with the `xpad` mapping and writes only changed values to uinput.
-5. Repeats the handshake every 10 s until the first report, then only after 60 s of silence. When the receiver disappears or goes to its "8BitDo IDLE" state it hands the interface back to `xpad` and waits again.
+5. Repeats the handshake every 10 s until the first report, then only after 60 s of silence. When the receiver disappears or goes to its "8BitDo IDLE" state it hands the interface back to `xpad` automatically.
 
 No force feedback is advertised, because a rumble packet silences the receiver. CPU use is negligible. Log: `/tmp/ultimate2c-bridge.log`.
 
@@ -52,6 +52,19 @@ This copies the daemon to `/media/developer/ultimate2c/`, creates the `enabled` 
 3. `ssh lgtv cat /tmp/ultimate2c-bridge.log` should show `input reports flowing`.
 
 If nothing arrives, unplug and replug the receiver with the controller already on. Moonlight and other apps see the same uinput node as a normal Xbox 360 pad.
+
+## Amazon Luna (third-party app compatibility)
+
+Some apps may not recognize the virtual controller when it reports the receiver's original USB identity (`2dc8:310a`). In a setup verified with Amazon Luna for webOS `1.0.19`, changing the virtual device identity to a standard Xbox 360 controller (`045e:028e`) allowed Luna to detect it. The input mapping and receiver handshake remain unchanged.
+
+In `ultimate2c-bridge.py`, update the `Uinput` call and log message in `serve()` as follows:
+
+```diff
+-        ui = Uinput(VID, PID, version); log("uinput device created: %r" % UINPUT_NAME)
++        ui = Uinput(0x045e, 0x028e, version); log("uinput device created as Xbox 360: %r" % UINPUT_NAME)
+```
+
+Then reinstall or copy the modified script to the TV and restart the bridge. Fully exit and reopen Amazon Luna so it enumerates the controller again. To verify the change, the bridge log should include `uinput device created as Xbox 360` and `input reports flowing`. This workaround changes only the virtual controller's reported identity; it does not modify webOS, the kernel, or the receiver firmware.
 
 ## Uninstall
 
