@@ -1,4 +1,4 @@
-# webos-ultimate2c-bridge
+# WebOS - 8BitDo Ultimate 2C - Bridge
 
 Makes the **8BitDo Ultimate 2C** work over its **2.4 GHz USB receiver** on a rooted LG webOS TV.
 
