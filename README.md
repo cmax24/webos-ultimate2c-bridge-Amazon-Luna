@@ -53,7 +53,7 @@ This copies the daemon to `/media/developer/ultimate2c/`, creates the `enabled` 
 
 If nothing arrives, unplug and replug the receiver with the controller already on. Moonlight and other apps see the same uinput node as a normal Xbox 360 pad.
 
-## Amazon Luna (third-party app compatibility)
+## Third-Party App Compatibility (Amazon Luna fix in my personal case)
 
 Some apps may not recognize the virtual controller when it reports the receiver's original USB identity (`2dc8:310a`). In a setup verified with Amazon Luna for webOS `1.0.19`, changing the virtual device identity to a standard Xbox 360 controller (`045e:028e`) allowed Luna to detect it. The input mapping and receiver handshake remain unchanged.
 
